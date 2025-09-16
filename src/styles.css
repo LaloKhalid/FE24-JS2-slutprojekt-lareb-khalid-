@@ -1,0 +1,19 @@
+body {
+  font-family: Arial, sans-serif;
+  padding: 1rem;
+  background: #f9f9f9;
+}
+
+#board {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.column {
+  flex: 1;
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
