@@ -14,7 +14,7 @@
     "outDir": "./dist",
      "esModuleInterop": true,
       "forceConsistentCasingInFileNames": true,
-    
+    "moduleResolution": "node",
 
     // For nodejs:
     // "lib": ["esnext"],
