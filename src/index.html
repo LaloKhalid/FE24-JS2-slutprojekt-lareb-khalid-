@@ -7,26 +7,31 @@
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
+  <h1>Scrum Board</h1>
 
-<h1>Scrum Board</h1>
-
+  <!-- Add Member Form -->
   <h2>Add New Member</h2>
-<form id="member-form">
-  <input type="text" id="member-name" placeholder="Name" required>
-  <input type="text" id="member-role" placeholder="Role (frontend/backend/ux)" required>
-  <button type="submit">Add Member</button>
-</form>
+  <form id="member-form">
+    <input type="text" id="member-name" placeholder="Name" required>
+    <input type="text" id="member-role" placeholder="Role (frontend/backend/ux)" required>
+    <button type="submit">Add Member</button>
+  </form>
 
-<h2>Add New Task</h2>
-<form id="task-form">
-  <input type="text" id="task-title" placeholder="Title" required>
-  <input type="text" id="task-desc" placeholder="Description" required>
-  <input type="text" id="task-category" placeholder="Category (frontend/backend/ux)" required>
-  <button type="submit">Add Task</button>
-</form>
+    <!-- Members Section -->
+  <div id="members-list">
+    <h2>Team Members</h2>
+  </div>
 
+  <!-- Add Task Form -->
+  <h2>Add New Task</h2>
+  <form id="task-form">
+    <input type="text" id="task-title" placeholder="Title" required>
+    <input type="text" id="task-desc" placeholder="Description" required>
+    <input type="text" id="task-category" placeholder="Category (frontend/backend/ux)" required>
+    <button type="submit">Add Task</button>
+  </form>
 
-  
+  <!-- Scrum Board Columns -->
   <div id="board">
     <div class="column" id="new-tasks">
       <h2>New</h2>
@@ -38,6 +43,8 @@
       <h2>Done</h2>
     </div>
   </div>
+
+  <!-- Load TypeScript via Parcel -->
   <script type="module" src="./main.ts"></script>
 </body>
 </html>

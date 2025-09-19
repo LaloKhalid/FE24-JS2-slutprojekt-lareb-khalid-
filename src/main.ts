@@ -1,135 +1,181 @@
 import { Member } from "./models/Member";
 import { Task } from "./models/Task";
-import { 
-    getMembers, 
-    getTasks, 
-    updateTask, 
-    deleteTask, 
-    addMember, 
-    addTask 
+import {
+  addMember,
+  getMembers,
+  addTask,
+  getTasks,
+  updateTask,
+  deleteTask,
 } from "./services/firebase";
 
-console.log("Scrum Board Initialized!");
-
 // ---------------------------
-// DOM references
-// ---------------------------
-const newColumn = document.getElementById("new-tasks")!;
-const inProgressColumn = document.getElementById("in-progress")!;
-const doneColumn = document.getElementById("done")!;
-
-// ---------------------------
-// Global state
+// Global State
 // ---------------------------
 let members: Member[] = [];
 let tasks: Task[] = [];
 
-// ---------------------------
-// Initialize Board
-// ---------------------------
-async function initBoard() {
-    // Fetch members and tasks from Firestore
-    members = (await getMembers()).map(
-        m => new Member(m.id, m.name, m.role)
-    );
-
-    tasks = (await getTasks()).map(
-        t => new Task(
-            t.id,
-            t.title,
-            t.description,
-            t.category,
-            new Date(t.timestamp),
-            t.status ?? "new",
-            t.assigned ?? null
-        )
-    );
-
-    renderTasks();
-}
+console.log("🚀 Scrum Board Initialized!");
 
 // ---------------------------
-// Render Tasks
+// Render Tasks into Board
 // ---------------------------
 function renderTasks() {
-    // Clear columns
-    newColumn.innerHTML = "<h2>New</h2>";
-    inProgressColumn.innerHTML = "<h2>In Progress</h2>";
-    doneColumn.innerHTML = "<h2>Done</h2>";
+  const newCol = document.getElementById("new-tasks")!;
+  const inProgressCol = document.getElementById("in-progress")!;
+  const doneCol = document.getElementById("done")!;
 
-    tasks.forEach(task => {
-        const card = document.createElement("div");
-        card.className = "task-card";
-        card.innerHTML = `
-            <h3>${task.title}</h3>
-            <p>${task.description}</p>
-            <p>Category: ${task.category}</p>
-            <p>Created: ${task.timestamp.toLocaleString()}</p>
-            <p>Assigned: ${task.assigned ? getMemberName(task.assigned) : "None"}</p>
-            ${task.status === "new" ? renderAssignDropdown(task) : ""}
-            ${task.status === "in progress" ? `<button class="done-btn">Mark Done</button>` : ""}
-            ${task.status === "done" ? `<button class="delete-btn">Delete</button>` : ""}
-        `;
+  // Reset columns
+  newCol.innerHTML = "<h2>New</h2>";
+  inProgressCol.innerHTML = "<h2>In Progress</h2>";
+  doneCol.innerHTML = "<h2>Done</h2>";
 
-        // Append card to proper column
-        if (task.status === "new") newColumn.appendChild(card);
-        else if (task.status === "in progress") inProgressColumn.appendChild(card);
-        else doneColumn.appendChild(card);
+  tasks.forEach((task) => {
+    const div = document.createElement("div");
+    div.className = "task";
+    div.innerHTML = `
+      <h3>${task.title}</h3>
+      <p>${task.description}</p>
+      <p><strong>Category:</strong> ${task.category}</p>
+      <p><strong>Status:</strong> ${task.status}</p>
+      
+      <label>Assign to:</label>
+      <select class="assign-dropdown" data-task-id="${task.id}">
+        <option value="">-- Select Member --</option>
+        ${members
+          .map(
+            (m) =>
+              `<option value="${m.id}" ${
+                task.assigned === m.id ? "selected" : ""
+              }>${m.name}</option>`
+          )
+          .join("")}
+      </select>
 
-        // ---------------------------
-        // Event listeners
-        // ---------------------------
-        if (task.status === "new") {
-            const select = card.querySelector("select")!;
-            select.addEventListener("change", async () => {
-                const memberId = (select as HTMLSelectElement).value;
-                if (!memberId) return;
-                task.assign(memberId);
-                task.status = "in progress";
-                await updateTask(task.id, { assigned: memberId, status: "in progress" });
-                renderTasks();
-            });
-        }
+      <button class="mark-done" data-task-id="${task.id}">Mark Done</button>
+      <button class="delete-task" data-task-id="${task.id}">Delete</button>
+    `;
 
-        if (task.status === "in progress") {
-            const btn = card.querySelector(".done-btn")!;
-            btn.addEventListener("click", async () => {
-                task.markDone();
-                await updateTask(task.id, { status: "done" });
-                renderTasks();
-            });
-        }
+    if (task.status === "new") newCol.appendChild(div);
+    else if (task.status === "in-progress") inProgressCol.appendChild(div);
+    else if (task.status === "done") doneCol.appendChild(div);
+  });
 
-        if (task.status === "done") {
-            const btn = card.querySelector(".delete-btn")!;
-            btn.addEventListener("click", async () => {
-                await deleteTask(task.id);
-                tasks = tasks.filter(t => t.id !== task.id);
-                renderTasks();
-            });
-        }
+  // Event listeners
+  document.querySelectorAll<HTMLSelectElement>(".assign-dropdown").forEach((dropdown) => {
+    dropdown.addEventListener("change", async (e) => {
+      const select = e.target as HTMLSelectElement;
+      const taskId = select.dataset.taskId!;
+      const memberId = select.value || null;
+
+      await updateTask(taskId, {
+        assigned: memberId,
+        status: memberId ? "in-progress" : "new",
+      });
+
+      const task = tasks.find((t) => t.id === taskId);
+      if (task) {
+        task.assign(memberId || "");
+        task.status = memberId ? "in-progress" : "new";
+      }
+
+      renderTasks();
     });
-}
+  });
 
-// ---------------------------
-// Helpers
-// ---------------------------
-function renderAssignDropdown(task: Task) {
-    let options = `<option value="">Assign Member</option>`;
-    members.forEach(m => {
-        if (m.role.toLowerCase() === task.category.toLowerCase()) {
-            options += `<option value="${m.id}">${m.name} (${m.role})</option>`;
-        }
+  document.querySelectorAll<HTMLButtonElement>(".mark-done").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const taskId = btn.dataset.taskId!;
+      await updateTask(taskId, { status: "done" });
+
+      const task = tasks.find((t) => t.id === taskId);
+      if (task) task.markDone();
+
+      renderTasks();
     });
-    return `<select>${options}</select>`;
-}
+  });
 
-function getMemberName(id: string) {
-    const member = members.find(m => m.id === id);
-    return member ? member.name : "Unknown";
+  document.querySelectorAll<HTMLButtonElement>(".delete-task").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const taskId = btn.dataset.taskId!;
+      await deleteTask(taskId);
+
+      tasks = tasks.filter((t) => t.id !== taskId);
+      renderTasks();
+    });
+  });
 }
 
 // ---------------------------
-// Initialize App
+// Render Members List
 // ---------------------------
-initBoard();
+function renderMembers() {
+  const memberList = document.getElementById("members-list")!;
+  memberList.innerHTML = "<h2>Team Members</h2>";
+  members.forEach((m) => {
+    const div = document.createElement("div");
+    div.textContent = `${m.name} (${m.role})`;
+    memberList.appendChild(div);
+  });
+}
+
+// ---------------------------
+// Load Initial Data
+// ---------------------------
+async function loadData() {
+  const firebaseMembers = await getMembers();
+  members = firebaseMembers.map((m: any) => new Member(m.id, m.name, m.role));
+
+  const firebaseTasks = await getTasks();
+  tasks = firebaseTasks.map(
+    (t: any) =>
+      new Task(
+        t.id,
+        t.title,
+        t.description,
+        t.category,
+        t.timestamp.toDate ? t.timestamp.toDate() : new Date(t.timestamp),
+        t.status,
+        t.assigned
+      )
+  );
+
+  renderMembers();
+  renderTasks();
+}
+
+// ---------------------------
+// Form Handling
+// ---------------------------
+document.addEventListener("DOMContentLoaded", () => {
+  // Add member form
+  const memberForm = document.getElementById("member-form") as HTMLFormElement;
+  memberForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = (document.getElementById("member-name") as HTMLInputElement).value;
+    const role = (document.getElementById("member-role") as HTMLInputElement).value;
+
+    const docRef = await addMember(name, role);
+    members.push(new Member(docRef.id, name, role));
+    renderMembers();
+
+    memberForm.reset();
+  });
+
+  // Add task form
+  const taskForm = document.getElementById("task-form") as HTMLFormElement;
+  taskForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const title = (document.getElementById("task-title") as HTMLInputElement).value;
+    const description = (document.getElementById("task-desc") as HTMLInputElement).value;
+    const category = (document.getElementById("task-category") as HTMLInputElement).value;
+
+    const docRef = await addTask(title, description, category);
+    tasks.push(new Task(docRef.id, title, description, category, new Date()));
+    renderTasks();
+
+    taskForm.reset();
+  });
+
+  loadData();
+});
